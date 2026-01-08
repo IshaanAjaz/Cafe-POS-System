@@ -31,7 +31,6 @@ import {
   ScrollText,
   LogOut,
   User,
-  Mail,
   CheckCircle2,
 } from 'lucide-react-native';
 
@@ -188,20 +187,39 @@ const AppContent = () => {
     showToast('Settings Saved Successfully!', 'success');
   };
 
+  // --- UPDATED SCAN LOGIC (Sorting & Filtering) ---
   const handleScanPrinters = async () => {
     setIsScanning(true);
     setFoundPrinters([]);
     try {
       const devices = await PrinterService.scanDevices();
       const all: any[] = [...(devices.paired || []), ...(devices.found || [])];
+
+      // Filter Duplicates
       const unique = all.filter(
         (v, i, a) => a.findIndex(t => t.address === v.address) === i,
       );
+
+      // SORTING: Prioritize "Printer-like" names -> Named Devices -> Unnamed
+      unique.sort((a, b) => {
+        const nameA = (a.name || '').toUpperCase();
+        const nameB = (b.name || '').toUpperCase();
+
+        const isPrinterA = nameA.match(/MTP|POS|RPP|PRINTER|EPSON|THERMAL|BT/);
+        const isPrinterB = nameB.match(/MTP|POS|RPP|PRINTER|EPSON|THERMAL|BT/);
+
+        if (isPrinterA && !isPrinterB) return -1;
+        if (!isPrinterA && isPrinterB) return 1;
+        if (nameA && !nameB) return -1;
+        if (!nameA && nameB) return 1;
+        return 0;
+      });
+
       setFoundPrinters(unique);
       if (unique.length > 0) {
-        showToast(`Found ${unique.length} printers`, 'info');
+        showToast(`Found ${unique.length} devices`, 'info');
       } else {
-        showToast('No printers found', 'warning');
+        showToast('No devices found', 'warning');
       }
     } catch (e) {
       showToast('Scan failed', 'error');
@@ -221,7 +239,7 @@ const AppContent = () => {
     }
   };
 
-  // --- LOGOUT HANDLER (UPDATED) ---
+  // --- LOGOUT HANDLER ---
   const handleLogout = () => {
     askConfirmation({
       title: 'Log Out',
@@ -319,7 +337,7 @@ const AppContent = () => {
           <ScrollView contentContainerStyle={{padding: 20}}>
             <Text style={styles.heading}>App Settings</Text>
 
-            {/* NEW ACCOUNT INFO SECTION */}
+            {/* ACCOUNT INFO SECTION */}
             <Text style={styles.sectionHeader}>Account Info</Text>
             <View style={styles.card}>
               <View
@@ -492,35 +510,73 @@ const AppContent = () => {
               <Text style={{fontSize: 12, color: 'gray', marginBottom: 10}}>
                 Current: {selectedPrinter || 'Not Connected'}
               </Text>
+
+              {/* UPDATED PRINTER LIST WITH SCROLL */}
               {foundPrinters.length > 0 && (
-                <View style={styles.printerList}>
-                  {foundPrinters.map((p, idx) => (
-                    <TouchableOpacity
-                      key={idx}
-                      onPress={() => handleConnectPrinter(p.address)}
-                      style={styles.printerRow}>
-                      <View>
-                        <Text style={{fontSize: 14, fontWeight: 'bold'}}>
-                          {p.name || 'Unknown Device'}
-                        </Text>
-                        <Text style={{fontSize: 10, color: 'gray'}}>
-                          {p.address}
-                        </Text>
-                      </View>
-                      {selectedPrinter === p.address && (
-                        <Text
-                          style={{
-                            color: 'green',
-                            fontWeight: 'bold',
-                            fontSize: 10,
-                          }}>
-                          CONNECTED
-                        </Text>
-                      )}
-                    </TouchableOpacity>
-                  ))}
+                <View style={styles.printerListContainer}>
+                  <Text style={styles.listHeader}>Available Devices:</Text>
+                  <ScrollView
+                    style={styles.printerScroll}
+                    nestedScrollEnabled={true}
+                    showsVerticalScrollIndicator={true}>
+                    {foundPrinters.map((p, idx) => (
+                      <TouchableOpacity
+                        key={idx}
+                        onPress={() => handleConnectPrinter(p.address)}
+                        style={styles.printerRow}>
+                        <View style={{flex: 1}}>
+                          <View
+                            style={{
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              gap: 6,
+                            }}>
+                            <Bluetooth
+                              size={14}
+                              color={p.name ? '#2563eb' : '#94a3b8'}
+                            />
+                            <Text
+                              style={{
+                                fontSize: 14,
+                                fontWeight: 'bold',
+                                color: '#1e293b',
+                              }}>
+                              {p.name || 'Unknown Device'}
+                            </Text>
+                          </View>
+                          <Text
+                            style={{
+                              fontSize: 10,
+                              color: '#64748b',
+                              marginLeft: 20,
+                            }}>
+                            {p.address}
+                          </Text>
+                        </View>
+                        {selectedPrinter === p.address && (
+                          <View
+                            style={{
+                              backgroundColor: '#dcfce7',
+                              paddingHorizontal: 6,
+                              paddingVertical: 2,
+                              borderRadius: 4,
+                            }}>
+                            <Text
+                              style={{
+                                color: '#16a34a',
+                                fontWeight: 'bold',
+                                fontSize: 10,
+                              }}>
+                              CONNECTED
+                            </Text>
+                          </View>
+                        )}
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
                 </View>
               )}
+
               <TouchableOpacity
                 onPress={() => PrinterService.testPrint()}
                 style={styles.testPrintBtn}>
@@ -537,7 +593,6 @@ const AppContent = () => {
               <Text style={styles.saveBtnText}>Save All Settings</Text>
             </TouchableOpacity>
 
-            {/* LOGOUT BUTTON ADDED HERE */}
             <TouchableOpacity
               onPress={handleLogout}
               style={[
@@ -605,7 +660,7 @@ const AppContent = () => {
   );
 };
 
-// --- RESTORED MAINLAYOUT TO HANDLE AUTH STATE ---
+// --- MAIN LAYOUT ---
 const MainLayout = () => {
   // @ts-ignore
   const {user, loading} = useAuth();
@@ -718,21 +773,38 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   link: {color: COLORS.blue600, fontWeight: '600'},
-  printerList: {
-    maxHeight: 200,
-    backgroundColor: '#f1f5f9',
-    marginBottom: 10,
+
+  // --- UPDATED PRINTER LIST STYLES ---
+  printerListContainer: {
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
     borderRadius: 8,
-    padding: 4,
+    backgroundColor: '#f8fafc',
+    overflow: 'hidden',
+  },
+  listHeader: {
+    fontSize: 11,
+    fontWeight: 'bold',
+    color: '#64748b',
+    padding: 8,
+    backgroundColor: '#f1f5f9',
+    borderBottomWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  printerScroll: {
+    maxHeight: 180, // Restricts height to avoid overflow
   },
   printerRow: {
-    padding: 10,
+    padding: 12,
     borderBottomWidth: 1,
     borderColor: '#e2e8f0',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    backgroundColor: 'white',
   },
+
   saveBtn: {
     backgroundColor: COLORS.slate900,
     padding: 15,
