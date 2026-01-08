@@ -8,3 +8,7 @@
 #   http://developer.android.com/guide/developing/tools/proguard.html
 
 # Add any project specific keep options here:
+# Keep the PDF Library
+-keep class com.htmltopdf.** { *; }
+-keep class com.christopherdro.htmltopdf.** { *; }
+-keepclassmembers class * { @com.facebook.react.uimanager.annotations.ReactProp <methods>; }
