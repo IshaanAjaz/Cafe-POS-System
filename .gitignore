@@ -75,5 +75,6 @@ android/app/google-services.json
 ios/GoogleService-Info.plist
 .firebaserc
 
-#key
-app/hisaabkitaabkey.jks
+# Ignore all keystore files
+*.jks
+*.keystore
