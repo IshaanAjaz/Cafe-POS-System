@@ -8,14 +8,13 @@ import {
   Modal,
   useWindowDimensions,
 } from 'react-native';
-import {FirebaseService} from '../services/FirebaseService'; // <--- UPDATED
+import {FirebaseService} from '../services/FirebaseService';
 import {POSContext} from '../context/POSContext';
 import {X} from 'lucide-react-native';
-import {useToast} from '../context/ToastContext';
+// Removed useToast import
 
-const MenuGrid = ({searchQuery = ''}) => {
+const MenuGrid = ({searchQuery = '', onItemAdded}) => {
   const {addToCart} = useContext(POSContext);
-  const {showToast} = useToast();
   const {width} = useWindowDimensions();
 
   // Dynamic columns
@@ -34,7 +33,7 @@ const MenuGrid = ({searchQuery = ''}) => {
     });
 
     const unsubMenu = FirebaseService.subscribeMenu(items => {
-      // Process items (parse variants if string, though in Firebase they are objects usually)
+      // Process items
       const processed = items.map(item => {
         if (item.variants && typeof item.variants === 'string') {
           try {
@@ -69,18 +68,21 @@ const MenuGrid = ({searchQuery = ''}) => {
       setVariantModalItem(item);
     } else {
       addToCart(item);
-      showToast(`Added ${item.name}`, 'success');
+      // Removed showToast, notify parent instead
+      if (onItemAdded) onItemAdded(item);
     }
   };
 
   const handleVariantSelect = variant => {
-    addToCart({
+    const finalItem = {
       ...variantModalItem,
       price: variant.price,
       variantName: variant.name,
       id: variantModalItem.id,
-    });
-    showToast(`Added ${variantModalItem.name} (${variant.name})`, 'success');
+    };
+    addToCart(finalItem);
+    // Removed showToast, notify parent instead
+    if (onItemAdded) onItemAdded(finalItem);
     setVariantModalItem(null);
   };
 

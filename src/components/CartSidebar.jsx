@@ -8,6 +8,8 @@ import {
   Modal,
   TextInput,
   ActivityIndicator,
+  ToastAndroid,
+  Platform,
 } from 'react-native';
 import {POSContext} from '../context/POSContext';
 import {FirebaseService} from '../services/FirebaseService';
@@ -287,9 +289,18 @@ const CartSidebar = ({
                   style={styles.qtyBtn}>
                   <Text>-</Text>
                 </TouchableOpacity>
-                <Text style={{fontWeight: 'bold', marginHorizontal: 8}}>
+
+                {/* Visible Quantity Indicator */}
+                <Text
+                  style={{
+                    fontWeight: 'bold',
+                    marginHorizontal: 8,
+                    color: '#334155',
+                    fontSize: 15,
+                  }}>
                   {item.qty}
                 </Text>
+
                 <TouchableOpacity
                   onPress={() => updateQty(item.cartId, 1)}
                   style={[styles.qtyBtn, {backgroundColor: '#dbeafe'}]}>
