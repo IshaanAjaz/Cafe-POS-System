@@ -38,13 +38,14 @@ Since this project relies on Firebase, you must set up your own Firebase project
 Bash
 
 git clone https://github.com/IshaanAjaz/Cafe-POS-System
+
 2. Install Dependencies
 Bash
-
 npm install
 # or
 yarn install
-3. Firebase Configuration (Critical Step)
+
+3. Firebase Configuration (Critical Step):
 This app requires google-services.json (Android) and GoogleService-Info.plist (iOS) to function. These files are not included in the repo for security reasons.
 
 Go to the Firebase Console.
@@ -84,14 +85,10 @@ Place it inside ios/.
 
 4. Run the App
 For Android:
-
 Bash
-
 npx react-native run-android
 For iOS:
-
 Bash
-
 cd ios && pod install && cd ..
 npx react-native run-ios
 📱 Generating a Release APK
@@ -100,9 +97,7 @@ To generate a standalone APK file to install on your phone:
 Ensure you have set up your my-upload-key.keystore and gradle.properties as per React Native documentation.
 
 Run the build command:
-
 Bash
-
 cd android
 ./gradlew assembleRelease
 The APK will be generated at: android/app/build/outputs/apk/release/app-release.apk
