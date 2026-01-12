@@ -38,6 +38,7 @@ Since this project relies on Firebase, you must set up your own Firebase project
 Bash
 
 git clone https://github.com/IshaanAjaz/Cafe-POS-System
+
 2. Install Dependencies
 Bash
 
