@@ -1,79 +1,126 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+Hisaab Kitaab POS 🧾
+A complete Point of Sale (POS) system built with React Native and Firebase. Designed for Cafes and Restaurants to manage orders, print thermal receipts via Bluetooth, and track daily financial reports.
 
-# Getting Started
+🚀 Features
+Table Management: Visual grid layout to manage active tables and orders.
 
->**Note**: Make sure you have completed the [React Native - Environment Setup](https://reactnative.dev/docs/environment-setup) instructions till "Creating a new application" step, before proceeding.
+Menu Management: Add, edit, and delete items and categories dynamically. Supports item variants (e.g., Half/Full).
 
-## Step 1: Start the Metro Server
+Order Processing: Real-time cart management, calculation of totals, discounts, and extra charges.
 
-First, you will need to start **Metro**, the JavaScript _bundler_ that ships _with_ React Native.
+Bluetooth Printing: Seamless integration with Thermal Printers (58mm & 80mm support). Prints professional receipts with cafe details.
 
-To start Metro, run the following command from the _root_ of your React Native project:
+Financial Reports: View Daily, Monthly, and Yearly sales. Track pending payments vs. paid orders.
 
-```bash
-# using npm
-npm start
+PDF Export: Generate and download detailed sales reports as PDFs.
 
-# OR using Yarn
-yarn start
-```
+User Authentication: Secure Email/Password login with email verification enforcement.
 
-## Step 2: Start your Application
+Customizable Settings: Change Cafe Name, Phone Number, and Receipt Footer directly from the app.
 
-Let Metro Bundler run in its _own_ terminal. Open a _new_ terminal from the _root_ of your React Native project. Run the following command to start your _Android_ or _iOS_ app:
+🛠️ Tech Stack
+Frontend: React Native (CLI)
 
-### For Android
+Backend/Database: Firebase Firestore (Real-time updates)
 
-```bash
-# using npm
-npm run android
+Auth: Firebase Authentication
 
-# OR using Yarn
-yarn android
-```
+Printing: react-native-bluetooth-escpos-printer
 
-### For iOS
+Icons: Lucide React Native
 
-```bash
-# using npm
-npm run ios
+Storage: Async Storage (Local settings)
 
-# OR using Yarn
-yarn ios
-```
+⚙️ Installation & Setup
+Since this project relies on Firebase, you must set up your own Firebase project to run the app.
 
-If everything is set up _correctly_, you should see your new app running in your _Android Emulator_ or _iOS Simulator_ shortly provided you have set up your emulator/simulator correctly.
+1. Clone the Repository
+Bash
 
-This is one way to run your app — you can also run it directly from within Android Studio and Xcode respectively.
+git clone https://github.com/IshaanAjaz/Cafe-POS-System
+2. Install Dependencies
+Bash
 
-## Step 3: Modifying your App
+npm install
+# or
+yarn install
+3. Firebase Configuration (Critical Step)
+This app requires google-services.json (Android) and GoogleService-Info.plist (iOS) to function. These files are not included in the repo for security reasons.
 
-Now that you have successfully run the app, let's modify it.
+Go to the Firebase Console.
 
-1. Open `App.tsx` in your text editor of choice and edit some lines.
-2. For **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Developer Menu** (<kbd>Ctrl</kbd> + <kbd>M</kbd> (on Window and Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (on macOS)) to see your changes!
+Create a new project.
 
-   For **iOS**: Hit <kbd>Cmd ⌘</kbd> + <kbd>R</kbd> in your iOS Simulator to reload the app and see your changes!
+Enable Authentication:
 
-## Congratulations! :tada:
+Go to Build > Authentication > Sign-in method.
 
-You've successfully run and modified your React Native App. :partying_face:
+Enable Email/Password.
 
-### Now what?
+Enable Firestore Database:
 
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [Introduction to React Native](https://reactnative.dev/docs/getting-started).
+Go to Build > Firestore Database > Create Database.
 
-# Troubleshooting
+Start in Production Mode.
 
-If you can't get this to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
+(Optional) Update rules to allow authenticated read/write:
 
-# Learn More
+JavaScript
 
-To learn more about React Native, take a look at the following resources:
+allow read, write: if request.auth != null;
+Add Android App:
 
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+Package name: com.hisaabkitaab (Check your android/app/build.gradle applicationId to be sure).
+
+Download google-services.json.
+
+Place it inside android/app/.
+
+Add iOS App (If building for iOS):
+
+Download GoogleService-Info.plist.
+
+Place it inside ios/.
+
+4. Run the App
+For Android:
+
+Bash
+
+npx react-native run-android
+For iOS:
+
+Bash
+
+cd ios && pod install && cd ..
+npx react-native run-ios
+📱 Generating a Release APK
+To generate a standalone APK file to install on your phone:
+
+Ensure you have set up your my-upload-key.keystore and gradle.properties as per React Native documentation.
+
+Run the build command:
+
+Bash
+
+cd android
+./gradlew assembleRelease
+The APK will be generated at: android/app/build/outputs/apk/release/app-release.apk
+
+🖨️ Printer Setup
+The app supports ESC/POS Bluetooth Thermal Printers.
+
+Go to Settings tab within the app.
+
+Ensure Bluetooth is ON and the printer is paired with your phone settings first.
+
+Click "Scan Devices".
+
+Select your printer from the list.
+
+Click "Test Print" to verify connection.
+
+Note on Permissions: On Android 12+ (API 31+), the app will request BLUETOOTH_SCAN and BLUETOOTH_CONNECT permissions. On older versions, it requests ACCESS_FINE_LOCATION.
+
+📄 License
+This project is licensed under the MIT License - see the LICENSE file for details.
