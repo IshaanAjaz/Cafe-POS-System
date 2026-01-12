@@ -9,7 +9,7 @@ import {
   Switch,
 } from 'react-native';
 import {FirebaseService} from '../services/FirebaseService';
-import {Trash2, Coffee, ChevronDown} from 'lucide-react-native';
+import {Trash2, Coffee, ChevronDown, Edit2, XCircle} from 'lucide-react-native'; // <--- Added Edit2, XCircle
 import {useToast} from '../context/ToastContext';
 import {useConfirmation} from '../context/ConfirmationContext';
 
@@ -23,6 +23,7 @@ const MenuManager = () => {
   const [selectedFilterCat, setSelectedFilterCat] = useState('All');
 
   // Forms
+  const [editId, setEditId] = useState(null); // <--- Edit State
   const [newItem, setNewItem] = useState({
     name: '',
     category: '',
@@ -38,7 +39,7 @@ const MenuManager = () => {
     // --- REAL TIME LISTENERS ---
     const unsubCats = FirebaseService.subscribeCategories(cats => {
       setCategories(cats);
-      if (cats.length > 0 && !newItem.category) {
+      if (cats.length > 0 && !newItem.category && !editId) {
         setNewItem(prev => ({...prev, category: cats[0].name}));
       }
     });
@@ -97,6 +98,38 @@ const MenuManager = () => {
     setVariantInput({name: '', price: ''});
   };
 
+  const removeVariant = index => {
+    const updated = [...newItem.variants];
+    updated.splice(index, 1);
+    setNewItem({...newItem, variants: updated});
+  };
+
+  // --- EDIT LOGIC ---
+  const handleEdit = item => {
+    setNewItem({
+      name: item.name,
+      category: item.category,
+      price: item.price ? String(item.price) : '',
+      isVariant: item.isVariant === 1 || item.isVariant === true,
+      variants: item.variants || [],
+    });
+    setEditId(item.id);
+    setView('items');
+    // Optional: scroll to top logic would go here
+  };
+
+  const cancelEdit = () => {
+    setEditId(null);
+    setNewItem({
+      name: '',
+      category: categories[0]?.name || '',
+      price: '',
+      isVariant: false,
+      variants: [],
+    });
+  };
+  // ------------------
+
   const saveItem = async () => {
     if (!newItem.name || !newItem.category) {
       showToast('Item Name and Category are required', 'warning');
@@ -109,11 +142,21 @@ const MenuManager = () => {
         category: newItem.category,
         price: newItem.price || 0,
         isVariant: newItem.isVariant ? 1 : 0,
-        variants: newItem.variants, // Firebase handles arrays natively!
+        variants: newItem.variants,
       };
 
-      await FirebaseService.addItem(itemToSave);
+      if (editId) {
+        // UPDATE MODE
+        await FirebaseService.updateItem(editId, itemToSave);
+        showToast('Item Updated Successfully', 'success');
+        setEditId(null); // Exit edit mode
+      } else {
+        // ADD MODE
+        await FirebaseService.addItem(itemToSave);
+        showToast('Item Added Successfully', 'success');
+      }
 
+      // Reset Form
       setNewItem({
         name: '',
         category: categories[0]?.name || '',
@@ -121,8 +164,8 @@ const MenuManager = () => {
         isVariant: false,
         variants: [],
       });
-      showToast('Item Added Successfully', 'success');
     } catch (e) {
+      console.error(e);
       showToast('Failed to save item', 'error');
     }
   };
@@ -214,8 +257,29 @@ const MenuManager = () => {
       {/* ITEMS VIEW */}
       {view === 'items' && (
         <View style={styles.section}>
-          <View style={styles.formCard}>
-            <Text style={styles.label}>Add New Item</Text>
+          <View
+            style={[
+              styles.formCard,
+              editId ? {borderColor: '#3b82f6', borderWidth: 2} : {},
+            ]}>
+            <View
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: 10,
+              }}>
+              <Text style={[styles.label, {marginBottom: 0}]}>
+                {editId ? 'Editing Item' : 'Add New Item'}
+              </Text>
+              {editId && (
+                <TouchableOpacity onPress={cancelEdit}>
+                  <Text style={{color: '#ef4444', fontWeight: 'bold'}}>
+                    Cancel
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
 
             <TextInput
               value={newItem.name}
@@ -293,9 +357,20 @@ const MenuManager = () => {
                   Manage Variants
                 </Text>
                 {newItem.variants.map((v, i) => (
-                  <Text key={i} style={{fontSize: 12, color: '#64748b'}}>
-                    {v.name} - ₹{v.price}
-                  </Text>
+                  <View
+                    key={i}
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                      marginBottom: 4,
+                    }}>
+                    <Text style={{fontSize: 12, color: '#64748b'}}>
+                      {v.name} - ₹{v.price}
+                    </Text>
+                    <TouchableOpacity onPress={() => removeVariant(i)}>
+                      <XCircle size={14} color="#ef4444" />
+                    </TouchableOpacity>
+                  </View>
                 ))}
                 <View style={{flexDirection: 'row', gap: 5, marginTop: 5}}>
                   <TextInput
@@ -333,9 +408,16 @@ const MenuManager = () => {
 
             <TouchableOpacity
               onPress={saveItem}
-              style={[styles.addBtn, {marginTop: 15, width: '100%'}]}>
+              style={[
+                styles.addBtn,
+                {
+                  marginTop: 15,
+                  width: '100%',
+                  backgroundColor: editId ? '#3b82f6' : '#2563eb',
+                },
+              ]}>
               <Text style={{color: 'white', fontWeight: 'bold'}}>
-                Save Item
+                {editId ? 'Update Item' : 'Save Item'}
               </Text>
             </TouchableOpacity>
           </View>
@@ -382,7 +464,7 @@ const MenuManager = () => {
 
             {filteredItems.map(i => (
               <View key={i.id} style={styles.listItem}>
-                <View>
+                <View style={{flex: 1}}>
                   <Text style={{fontWeight: 'bold', color: '#0f172a'}}>
                     {i.name}
                   </Text>
@@ -390,9 +472,16 @@ const MenuManager = () => {
                     {i.isVariant ? 'Variants Available' : `₹${i.price}`}
                   </Text>
                 </View>
-                <TouchableOpacity onPress={() => deleteItem(i.id)}>
-                  <Trash2 size={18} color="#ef4444" />
-                </TouchableOpacity>
+
+                {/* ACTION BUTTONS */}
+                <View style={{flexDirection: 'row', gap: 12}}>
+                  <TouchableOpacity onPress={() => handleEdit(i)}>
+                    <Edit2 size={18} color="#2563eb" />
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => deleteItem(i.id)}>
+                    <Trash2 size={18} color="#ef4444" />
+                  </TouchableOpacity>
+                </View>
               </View>
             ))}
           </View>

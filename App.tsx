@@ -180,11 +180,20 @@ const AppContent = () => {
   };
 
   const handleSaveSettings = async () => {
-    await AsyncStorage.setItem('cafe_name', cafeName);
-    await AsyncStorage.setItem('phone_number', phoneNumber);
-    await AsyncStorage.setItem('receipt_footer', receiptFooter);
-    await AsyncStorage.setItem('paper_size', paperSize);
-    showToast('Settings Saved Successfully!', 'success');
+    try {
+      await AsyncStorage.setItem('cafe_name', cafeName);
+      await AsyncStorage.setItem('phone_number', phoneNumber);
+      await AsyncStorage.setItem('receipt_footer', receiptFooter);
+      await AsyncStorage.setItem('paper_size', paperSize);
+
+      // Sync to Firebase so it appears in the database console
+      await FirebaseService.updateCafeDetails(cafeName, phoneNumber);
+
+      showToast('Settings Saved Successfully!', 'success');
+    } catch (e) {
+      console.error(e);
+      showToast('Failed to save settings', 'error');
+    }
   };
 
   // --- UPDATED SCAN LOGIC (Sorting & Filtering) ---
@@ -334,7 +343,11 @@ const AppContent = () => {
 
         {/* SETTINGS TAB */}
         {activeTab === 'settings' && (
-          <ScrollView contentContainerStyle={{padding: 20}}>
+          <ScrollView
+            contentContainerStyle={{
+              paddingVertical: 20,
+              paddingHorizontal: 32, // Increased from 20 to 32 for curved displays
+            }}>
             <Text style={styles.heading}>App Settings</Text>
 
             {/* ACCOUNT INFO SECTION */}

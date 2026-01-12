@@ -7,7 +7,7 @@ import {
   StyleSheet,
   Modal,
   TextInput,
-  ActivityIndicator, // <--- Import Indicator
+  ActivityIndicator,
 } from 'react-native';
 import {POSContext} from '../context/POSContext';
 import {FirebaseService} from '../services/FirebaseService';
@@ -44,19 +44,25 @@ const CartSidebar = ({
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [discount, setDiscount] = useState('0');
+  const [discountType, setDiscountType] = useState('flat'); // 'flat' | 'percent'
   const [extraAmount, setExtraAmount] = useState('0');
   const [extraReason, setExtraReason] = useState('');
 
-  // --- NEW STATE TO PREVENT DOUBLE CLICKS ---
   const [isProcessing, setIsProcessing] = useState(false);
+
+  // --- UPDATED CALCULATIONS ---
+  const discountVal = parseFloat(discount) || 0;
+  const actualDiscountAmount =
+    discountType === 'percent' ? (cartTotal * discountVal) / 100 : discountVal;
 
   const finalTotal = Math.max(
     0,
-    cartTotal + (parseFloat(extraAmount) || 0) - (parseFloat(discount) || 0),
+    cartTotal + (parseFloat(extraAmount) || 0) - actualDiscountAmount,
   );
 
   useEffect(() => {
     setDiscount('0');
+    setDiscountType('flat');
     setExtraAmount('0');
     setExtraReason('');
     setCustomerName('');
@@ -102,7 +108,7 @@ const CartSidebar = ({
   };
 
   const handleSaveOnly = async () => {
-    if (isProcessing) return; // Prevent double click
+    if (isProcessing) return;
     setIsProcessing(true);
 
     try {
@@ -118,22 +124,17 @@ const CartSidebar = ({
   };
 
   const handlePrint = async () => {
-    if (isProcessing) return; // Prevent double click
+    if (isProcessing) return;
     setIsProcessing(true);
 
     try {
       const savedOrder = await saveOrderToDB();
       if (savedOrder) {
-        // Now checks if printer actually succeeded
         const success = await PrinterService.printBill(savedOrder);
-
         if (success) {
           showToast('Sent to Printer', 'success');
           clearCart();
           onComplete();
-        } else {
-          // If print fails, we DO NOT clear cart, so user can try again
-          // We DO NOT show 'Sent to Printer' toast
         }
       }
     } finally {
@@ -164,7 +165,7 @@ const CartSidebar = ({
   };
 
   const finishOrder = async isPaidStatus => {
-    if (isProcessing) return; // Prevent double click (Jumping IDs)
+    if (isProcessing) return;
     setIsProcessing(true);
 
     try {
@@ -185,7 +186,7 @@ const CartSidebar = ({
       const updateData = {
         items: JSON.stringify(cart),
         subTotal: cartTotal,
-        discount: parseFloat(discount) || 0,
+        discount: actualDiscountAmount, // Send the calculated currency value
         extraAmount: parseFloat(extraAmount) || 0,
         extraReason: extraReason,
         finalTotal: finalTotal,
@@ -423,16 +424,66 @@ const CartSidebar = ({
               <Text>Subtotal</Text>
               <Text style={{fontWeight: 'bold'}}>₹{cartTotal.toFixed(2)}</Text>
             </View>
+
+            {/* DISCOUNT SECTION */}
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Discount (₹)</Text>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: 4,
+                }}>
+                <Text style={styles.label}>Discount</Text>
+                {/* TOGGLE */}
+                <View style={{flexDirection: 'row', gap: 5}}>
+                  <TouchableOpacity onPress={() => setDiscountType('flat')}>
+                    <Text
+                      style={{
+                        color: discountType === 'flat' ? '#2563eb' : '#94a3b8',
+                        fontWeight: 'bold',
+                        fontSize: 16,
+                      }}>
+                      ₹
+                    </Text>
+                  </TouchableOpacity>
+                  <Text style={{color: '#cbd5e1'}}>|</Text>
+                  <TouchableOpacity onPress={() => setDiscountType('percent')}>
+                    <Text
+                      style={{
+                        color:
+                          discountType === 'percent' ? '#2563eb' : '#94a3b8',
+                        fontWeight: 'bold',
+                        fontSize: 16,
+                      }}>
+                      %
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
               <TextInput
                 keyboardType="numeric"
                 value={discount}
                 onChangeText={setDiscount}
                 style={styles.input}
                 editable={!isProcessing}
+                placeholder={discountType === 'percent' ? 'e.g. 10' : 'e.g. 50'}
               />
+              {/* Show calculated amount if percent mode is active */}
+              {discountType === 'percent' && (
+                <Text
+                  style={{
+                    fontSize: 12,
+                    color: '#64748b',
+                    textAlign: 'right',
+                    marginTop: 4,
+                  }}>
+                  - ₹{actualDiscountAmount.toFixed(2)}
+                </Text>
+              )}
             </View>
+
             <View style={{flexDirection: 'row', gap: 10}}>
               <View style={[styles.inputGroup, {flex: 1}]}>
                 <Text style={styles.label}>Extra (₹)</Text>

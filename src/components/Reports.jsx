@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, useRef} from 'react';
 import {
   View,
   Text,
@@ -27,6 +27,8 @@ import {
   User,
   Phone,
   Receipt,
+  Calendar,
+  CalendarRange,
 } from 'lucide-react-native';
 
 const ITEMS_PER_PAGE = 10;
@@ -34,8 +36,10 @@ const ITEMS_PER_PAGE = 10;
 const Reports = () => {
   const {showToast} = useToast();
   const {askConfirmation} = useConfirmation();
+  const scrollRef = useRef(); // Ref for the top menu scroll
 
-  const [mode, setMode] = useState('current');
+  const [mode, setMode] = useState('daily');
+  const [selectedDate, setSelectedDate] = useState(new Date());
   const [loading, setLoading] = useState(false);
 
   const [stats, setStats] = useState({
@@ -59,16 +63,41 @@ const Reports = () => {
   const [selectedItem, setSelectedItem] = useState(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
 
+  // Check if selected date is today to disable "Next" button
+  const isToday = selectedDate.toDateString() === new Date().toDateString();
+
   useEffect(() => {
     fetchReport();
-  }, [mode]);
+  }, [mode, selectedDate]);
 
   const fetchReport = async () => {
     setLoading(true);
     const today = new Date();
     let start, end;
 
-    if (mode === 'current') {
+    if (mode === 'daily') {
+      start = new Date(
+        today.getFullYear(),
+        today.getMonth(),
+        today.getDate(),
+      ).toISOString();
+      end = new Date(
+        today.getFullYear(),
+        today.getMonth(),
+        today.getDate() + 1,
+      ).toISOString();
+    } else if (mode === 'custom') {
+      start = new Date(
+        selectedDate.getFullYear(),
+        selectedDate.getMonth(),
+        selectedDate.getDate(),
+      ).toISOString();
+      end = new Date(
+        selectedDate.getFullYear(),
+        selectedDate.getMonth(),
+        selectedDate.getDate() + 1,
+      ).toISOString();
+    } else if (mode === 'current') {
       start = new Date(today.getFullYear(), today.getMonth(), 1).toISOString();
       end = new Date(
         today.getFullYear(),
@@ -108,7 +137,7 @@ const Reports = () => {
         }
       });
 
-      // Sort by date desc (Already here, kept as requested)
+      // Sort by date desc
       paidList.sort((a, b) => new Date(b.date) - new Date(a.date));
       pendingList.sort((a, b) => new Date(b.date) - new Date(a.date));
       expenses.sort((a, b) => new Date(b.date) - new Date(a.date));
@@ -140,6 +169,16 @@ const Reports = () => {
     }
   };
 
+  const changeDate = days => {
+    const newDate = new Date(selectedDate);
+    newDate.setDate(newDate.getDate() + days);
+
+    // Extra safety check: prevent going to future
+    if (days > 0 && newDate > new Date()) return;
+
+    setSelectedDate(newDate);
+  };
+
   const handleSettleOrder = orderId => {
     askConfirmation({
       title: 'Confirm Settle',
@@ -157,7 +196,6 @@ const Reports = () => {
           ...data.paidOrders,
         ];
 
-        // Re-sort paid list to keep date order correct after insertion
         newPaid.sort((a, b) => new Date(b.date) - new Date(a.date));
 
         setData(prev => ({
@@ -234,6 +272,10 @@ const Reports = () => {
     }
     try {
       let reportTitle = 'Current Month';
+      if (mode === 'daily')
+        reportTitle = `Daily Report (${new Date().toLocaleDateString()})`;
+      if (mode === 'custom')
+        reportTitle = `Daily Report (${selectedDate.toLocaleDateString()})`;
       if (mode === 'previous') reportTitle = 'Last Month';
       if (mode === 'year')
         reportTitle = `Yearly Report (${new Date().getFullYear()})`;
@@ -255,7 +297,6 @@ const Reports = () => {
     return list.slice(start, end);
   };
 
-  // Helper to check if we need a date header
   const shouldShowHeader = (currentDate, index, array) => {
     if (index === 0) return true;
     const prevDate = new Date(array[index - 1].date).toDateString();
@@ -320,10 +361,55 @@ const Reports = () => {
 
       {/* CONTROLS */}
       <View style={styles.controls}>
+        {/* Left Arrow for Menu */}
+        <TouchableOpacity
+          onPress={() => scrollRef.current?.scrollTo({x: 0, animated: true})}
+          style={styles.navArrow}>
+          <ChevronLeft size={20} color="#64748b" />
+        </TouchableOpacity>
+
         <ScrollView
+          ref={scrollRef}
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.toggleWrapper}>
+          <TouchableOpacity
+            onPress={() => setMode('daily')}
+            style={[
+              styles.toggleBtn,
+              mode === 'daily' && styles.toggleActive,
+              {flexDirection: 'row', gap: 4},
+            ]}>
+            <Calendar
+              size={14}
+              color={mode === 'daily' ? 'white' : '#64748b'}
+            />
+            <Text
+              style={[styles.toggleText, mode === 'daily' && {color: 'white'}]}>
+              Today
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => setMode('custom')}
+            style={[
+              styles.toggleBtn,
+              mode === 'custom' && styles.toggleActive,
+              {flexDirection: 'row', gap: 4},
+            ]}>
+            <CalendarRange
+              size={14}
+              color={mode === 'custom' ? 'white' : '#64748b'}
+            />
+            <Text
+              style={[
+                styles.toggleText,
+                mode === 'custom' && {color: 'white'},
+              ]}>
+              Custom Date
+            </Text>
+          </TouchableOpacity>
+
           <TouchableOpacity
             onPress={() => setMode('current')}
             style={[
@@ -335,7 +421,7 @@ const Reports = () => {
                 styles.toggleText,
                 mode === 'current' && {color: 'white'},
               ]}>
-              Current
+              Current Month
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -369,28 +455,76 @@ const Reports = () => {
             </Text>
           </TouchableOpacity>
         </ScrollView>
+
+        {/* Right Arrow for Menu */}
+        <TouchableOpacity
+          onPress={() => scrollRef.current?.scrollToEnd({animated: true})}
+          style={styles.navArrow}>
+          <ChevronRight size={20} color="#64748b" />
+        </TouchableOpacity>
       </View>
 
       <View style={{alignItems: 'center', marginBottom: 20}}>
-        <View style={styles.dateBadge}>
-          <Text style={{fontSize: 12, fontWeight: 'bold', color: '#64748b'}}>
-            {mode === 'year'
-              ? `Year: ${new Date().getFullYear()}`
-              : mode === 'current'
-              ? new Date().toLocaleString('default', {
-                  month: 'long',
-                  year: 'numeric',
-                })
-              : (() => {
-                  const d = new Date();
-                  d.setMonth(d.getMonth() - 1);
-                  return d.toLocaleString('default', {
+        {mode === 'custom' ? (
+          <View
+            style={[
+              styles.dateBadge,
+              {flexDirection: 'row', gap: 12, alignItems: 'center'},
+            ]}>
+            <TouchableOpacity onPress={() => changeDate(-1)}>
+              <ChevronLeft size={20} color="#0f172a" />
+            </TouchableOpacity>
+
+            <Text
+              style={{
+                fontSize: 14,
+                fontWeight: 'bold',
+                color: '#0f172a',
+                minWidth: 120,
+                textAlign: 'center',
+              }}>
+              {selectedDate.toLocaleDateString(undefined, {
+                weekday: 'short',
+                month: 'short',
+                day: 'numeric',
+              })}
+            </Text>
+
+            <TouchableOpacity
+              onPress={() => changeDate(1)}
+              disabled={isToday}
+              style={{opacity: isToday ? 0.3 : 1}}>
+              <ChevronRight size={20} color="#0f172a" />
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={styles.dateBadge}>
+            <Text style={{fontSize: 12, fontWeight: 'bold', color: '#64748b'}}>
+              {mode === 'daily'
+                ? new Date().toLocaleDateString(undefined, {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                  })
+                : mode === 'year'
+                ? `Year: ${new Date().getFullYear()}`
+                : mode === 'current'
+                ? new Date().toLocaleString('default', {
                     month: 'long',
                     year: 'numeric',
-                  });
-                })()}
-          </Text>
-        </View>
+                  })
+                : (() => {
+                    const d = new Date();
+                    d.setMonth(d.getMonth() - 1);
+                    return d.toLocaleString('default', {
+                      month: 'long',
+                      year: 'numeric',
+                    });
+                  })()}
+            </Text>
+          </View>
+        )}
       </View>
 
       {loading ? (
@@ -767,12 +901,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 10,
+    gap: 6, // Added gap for spacing between arrows and list
+  },
+  navArrow: {
+    padding: 8,
   },
   toggleWrapper: {
     flexDirection: 'row',
     backgroundColor: '#e2e8f0',
     borderRadius: 8,
     padding: 2,
+    flexGrow: 0, // Helps with layout within the row
   },
   toggleBtn: {
     paddingHorizontal: 12,

@@ -8,12 +8,19 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-  Alert, // <--- Added Alert for visibility
+  Alert,
 } from 'react-native';
 import {FirebaseService} from '../services/FirebaseService';
 import {useToast} from '../context/ToastContext';
 import {useConfirmation} from '../context/ConfirmationContext';
-import {NotebookTabs, Lock, Mail, ArrowRight} from 'lucide-react-native';
+import {
+  NotebookTabs,
+  Lock,
+  Mail,
+  ArrowRight,
+  Eye,
+  EyeOff,
+} from 'lucide-react-native';
 
 const COLORS = {
   slate900: '#0f172a',
@@ -29,6 +36,7 @@ const AuthScreen = () => {
 
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false); // <--- Added State
 
   const [form, setForm] = useState({email: '', password: ''});
 
@@ -64,7 +72,6 @@ const AuthScreen = () => {
       if (error.code === 'auth/user-not-found') msg = 'No account found';
       if (error.code === 'auth/wrong-password') msg = 'Incorrect password';
 
-      // Fix: Alert for unverified email to ensure user sees it
       if (error.message && error.message.includes('Email not verified')) {
         Alert.alert(
           'Verify Email',
@@ -146,8 +153,16 @@ const AuthScreen = () => {
               placeholder="Enter your password"
               value={form.password}
               onChangeText={t => setForm({...form, password: t})}
-              secureTextEntry
+              secureTextEntry={!showPassword} // <--- Toggled here
             />
+            {/* TOGGLE EYE ICON */}
+            <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+              {showPassword ? (
+                <EyeOff size={20} color={COLORS.gray500} />
+              ) : (
+                <Eye size={20} color={COLORS.gray500} />
+              )}
+            </TouchableOpacity>
           </View>
         </View>
 

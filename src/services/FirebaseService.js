@@ -27,10 +27,10 @@ export const FirebaseService = {
     );
     const user = userCredential.user;
     await user.sendEmailVerification();
-    
+
     // Sign out immediately so they can't access the app until verified
     await auth().signOut();
-    
+
     return user;
   },
 
@@ -57,7 +57,25 @@ export const FirebaseService = {
     await auth().signOut();
   },
 
-  // --- DATA SYNC (NEW) ---
+  // --- USER SETTINGS (NEW) ---
+  updateCafeDetails: async (name, phone) => {
+    const user = auth().currentUser;
+    if (!user) return;
+
+    // Save cafe details to the main user document
+    // We also save 'email' so you can identify the user in the database console
+    await firestore().collection('users').doc(user.uid).set(
+      {
+        cafeName: name,
+        phoneNumber: phone,
+        email: user.email,
+        updatedAt: firestore.FieldValue.serverTimestamp(),
+      },
+      {merge: true},
+    );
+  },
+
+  // --- DATA SYNC ---
   syncPendingWrites: async () => {
     // Attempt to sync pending writes to the server
     // We race against a 2-second timeout so logout doesn't hang if offline
@@ -253,5 +271,7 @@ export const FirebaseService = {
   addCategory: async name => getUserCollection(CAT_COL).add({name}),
   deleteCategory: async id => getUserCollection(CAT_COL).doc(id).delete(),
   addItem: async item => getUserCollection(MENU_COL).add(item),
+  updateItem: async (id, item) =>
+    getUserCollection(MENU_COL).doc(id).update(item),
   deleteItem: async id => getUserCollection(MENU_COL).doc(id).delete(),
 };
